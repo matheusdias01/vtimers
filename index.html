@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel de Temporizadores</title>
+    
+    <!-- Script para Prevenir Flash de Tema (FOUC) -->
+    <script>
+    (function(){
+      try {
+        const raw = localStorage.getItem('timersAppState');
+        if (raw) {
+          const theme = JSON.parse(raw).currentTheme;
+          if (theme === 'dark') {
+            document.documentElement.classList.add('dark');
+          }
+        } else {
+          if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            document.documentElement.classList.add('dark');
+          }
+        }
+      } catch(e){}
+    })();
+    </script>
+    
+    <!-- Configuração do Tailwind para Dark Mode via Classe -->
+    <script>
+      window.tailwind = {
+        config: {
+          darkMode: 'class',
+        },
+      };
+    </script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+    <meta name="theme-color" content="#1c1c1e">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="https://placehold.co/192x192/1c1c1e/FFFFFF?text=Timer">
+    <style>
+        body { font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+        .view-list { display: flex; flex-direction: column; gap: 1rem; }
+        .view-list .timer-card { flex-direction: row; align-items: center; justify-content: space-between; padding: 1rem 1.5rem; }
+        .view-list .timer-card-main { display: flex; align-items: center; gap: 1.5rem; }
+        .view-list .timer-name { font-size: 1.125rem; }
+        .view-list .time-container { font-size: 1.875rem; } /* text-3xl */
+        .view-list .timer-actions { display: flex; align-items: center; gap: 1rem; }
+        html:not(.dark) .timer-card:hover { background-color: #f9fafb; }
+        @keyframes fade-in { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fade-out { from { opacity: 1; } to { opacity: 0; } }
+        .animate-fade-in { animation: fade-in 0.3s ease-out forwards; }
+        .animate-fade-out { animation: fade-out 0.3s ease-in forwards; }
+        @keyframes blink { 50% { opacity: 0.5; } }
+        .blinking-time { animation: blink 1s step-end infinite; }
+    </style>
+</head>
+
+<body class="bg-gray-50 dark:bg-black text-gray-900 dark:text-white transition-colors duration-300">
+
+    <div id="app" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Cabeçalho -->
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-4xl font-bold">Temporizadores</h1>
+            <div class="flex items-center space-x-2">
+                 <button id="theme-toggle-btn" class="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors" title="Mudar tema" aria-label="Mudar tema">
+                    <!-- Ambos os ícones estão presentes. O JS controlará qual está visível. -->
+                    <svg id="theme-icon-sun" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="hidden"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+                    <svg id="theme-icon-moon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="hidden"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+                </button>
+                <div class="p-1 bg-gray-200 dark:bg-gray-800 rounded-lg">
+                    <button id="view-grid-btn" class="p-2 rounded-md text-gray-600 dark:text-gray-300" aria-label="Visão em Grade" title="Visão em Grade">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                    </button>
+                    <button id="view-list-btn" class="p-2 rounded-md text-gray-600 dark:text-gray-300" aria-label="Visão em Lista" title="Visão em Lista">
+                       <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+                    </button>
+                </div>
+                <button id="add-timer-btn" class="hidden sm:flex items-center justify-center w-10 h-10 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors active:scale-95" aria-label="Adicionar novo temporizador" title="Adicionar novo temporizador">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                </button>
+            </div>
+        </header>
+
+        <!-- Container dos Temporizadores -->
+        <main id="timers-container" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            <!-- Os temporizadores serão inseridos aqui pelo JavaScript -->
+        </main>
+    </div>
+    
+    <!-- Botão Flutuante para Mobile -->
+    <button id="add-timer-btn-mobile" class="sm:hidden fixed bottom-6 right-6 w-16 h-16 bg-blue-500 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-blue-600 transition-all duration-300 active:scale-95 z-50" aria-label="Adicionar novo temporizador" title="Adicionar novo temporizador">
+        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+    </button>
+    
+    <!-- Toast Container -->
+    <div id="toast-container" class="fixed top-5 right-5 z-50 space-y-2"></div>
+
+    <!-- Elemento de áudio -->
+    <audio id="alarm-sound" src="/assets/alarm.wav" preload="auto"></audio>
+
+    <!-- Template para Novo Temporizador -->
+    <template id="new-timer-template">
+        <div class="new-timer-creator bg-white dark:bg-[#1c1c1e] p-6 rounded-3xl shadow-lg flex flex-col items-center space-y-6 w-full max-w-sm mx-auto animate-fade-in col-span-full">
+            <input type="text" placeholder="Nome do Temporizador" class="creator-name-input text-center bg-gray-50 dark:bg-transparent border border-gray-200 dark:border-transparent text-gray-800 dark:text-gray-200 text-lg font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-lg w-full py-2">
+            
+            <div class="time-container relative h-16 flex items-center justify-center">
+                <input type="text" inputmode="numeric" pattern="[0-9]*" class="creator-time-input text-center font-bold w-full bg-gray-50 dark:bg-transparent border-b-2 border-gray-200 dark:border-transparent text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-lg text-4xl md:text-5xl py-2">
+            </div>
+
+            <div class="flex justify-between w-full pt-4">
+                <button class="creator-cancel-btn text-lg font-semibold text-red-500 hover:text-red-600 transition-colors px-6 py-3 rounded-full" aria-label="Cancelar criação de temporizador">Cancelar</button>
+                <button disabled class="creator-save-btn text-lg font-semibold bg-blue-500 text-white px-8 py-3 rounded-full shadow-md hover:bg-blue-600 transition-all duration-200 disabled:bg-gray-300 dark:disabled:bg-gray-700 disabled:cursor-not-allowed" aria-label="Salvar novo temporizador">Iniciar</button>
+            </div>
+        </div>
+    </template>
+
+    <script src="script.js"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('service-worker.js').then(registration => {
+                    console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                }, err => {
+                    console.log('ServiceWorker registration failed: ', err);
+                });
+            });
+        }
+    </script>
+</body>
+</html>
